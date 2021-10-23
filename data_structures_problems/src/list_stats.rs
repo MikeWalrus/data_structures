@@ -1,5 +1,7 @@
 use data_structures::*;
 use std::{
+    collections::LinkedList,
+    env,
     io::{self, BufRead},
     ops,
     process::exit,
@@ -8,20 +10,57 @@ use std::{
 use seq_list::SeqList;
 
 fn main() {
-    let l = read_numbers::<SeqList<i32>>().unwrap_or_else(|| {
-        eprintln!("error: Non-integer input.");
-        exit(1)
-    });
+    use Error::*;
+    if let Err(e) = actual_main() {
+        let msg: String = match e {
+            InputError => "Invalid input.".to_owned(),
+            EmptyListError => "Empty list.".to_owned(),
+            ArgsError(s) => format!("Invalid args: {}", s),
+        };
+        eprintln!("{}", msg);
+        usage()
+    };
+}
 
-    for i in l.iter() {
-        print!("{} ", i);
-    }
+fn usage() {
+    println!(
+        "Usage: {} -i/--implementation <name> | -h/--help",
+        env::args().next().unwrap()
+    )
+}
 
-    println!();
+fn stats<T>() -> Result<Stats<i32>>
+where
+    T: List<i32>,
+    for<'b> &'b T: IntoIterator<Item = &'b i32>,
+{
+    let l = read_numbers().ok_or(Error::InputError)?;
+    calc_stats(&l).ok_or(Error::EmptyListError)
+}
 
-    match calc_stats(&l) {
-        Some(stats) => println!("{:?}", stats),
-        _ => println!("Empty list."),
+fn actual_main() -> Result<()> {
+    let implementation = get_list_implementation()
+        .ok_or(Error::ArgsError("Specify the implementaion using `-i'."))?;
+    let s = match implementation.as_ref() {
+        "sequential" => stats::<SeqList<i32>>(),
+        "singly_linked" => stats::<linked_list::LinkedList<i32>>(),
+        _ => Err(Error::ArgsError("No such list implementation.")),
+    }?;
+    println!("{:?}", s);
+    Ok(())
+}
+
+fn get_list_implementation() -> Option<String> {
+    let mut args = env::args();
+    args.next()?;
+    let option = args.next()?;
+    if option == "-i" || option == "--implementation" {
+        args.next()
+    } else if option == "-h" || option == "--help" {
+        usage();
+        exit(0)
+    } else {
+        None
     }
 }
 
@@ -90,4 +129,12 @@ where
         max,
         avg: sum.into() / (len as f64),
     })
+}
+
+type Result<T> = std::result::Result<T, Error>;
+
+enum Error {
+    EmptyListError,
+    ArgsError(&'static str),
+    InputError,
 }

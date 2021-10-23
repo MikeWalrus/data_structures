@@ -3,7 +3,7 @@ use std::ptr;
 
 type Link<T> = Option<Box<Node<T>>>;
 
-struct LinkedList<T> {
+pub struct LinkedList<T> {
     head: Link<T>,
     tail: *mut Node<T>,
 }
@@ -40,7 +40,7 @@ impl<T> Drop for LinkedList<T> {
     }
 }
 
-struct Iter<'a, T> {
+pub struct Iter<'a, T> {
     next: Option<&'a Node<T>>,
 }
 
