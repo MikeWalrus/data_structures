@@ -1,0 +1,6 @@
+[workspace]
+
+members = [
+    "data_structures",
+    "data_structures_problems",
+]
