@@ -1,6 +1,5 @@
 use data_structures::*;
 use std::{
-    collections::LinkedList,
     env,
     io::{self, BufRead},
     ops,
@@ -41,11 +40,14 @@ where
 fn actual_main() -> Result<()> {
     let implementation = get_list_implementation()
         .ok_or(Error::ArgsError("Specify the implementaion using `-i'."))?;
+
     let s = match implementation.as_ref() {
         "sequential" => stats::<SeqList<i32>>(),
         "singly_linked" => stats::<linked_list::LinkedList<i32>>(),
+        "circular" => stats::<cir_linked_list::CirLinkedList<i32>>(),
         _ => Err(Error::ArgsError("No such list implementation.")),
     }?;
+
     println!("{:?}", s);
     Ok(())
 }

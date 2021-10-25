@@ -1,3 +1,4 @@
+pub mod cir_linked_list;
 pub mod linked_list;
 pub mod seq_list;
 
