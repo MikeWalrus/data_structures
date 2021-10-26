@@ -116,6 +116,16 @@ impl<'a, T> Iterator for Iter<'a, T> {
     }
 }
 
+impl<'a, T> DoubleEndedIterator for Iter<'a, T> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        if self.list.head.is_null() {
+            None
+        } else {
+            unimplemented!()
+        }
+    }
+}
+
 impl<T> List<T> for CirLinkedList<T> {
     fn push(&mut self, elem: T) {
         if self.head.is_null() {

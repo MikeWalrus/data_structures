@@ -4,9 +4,11 @@ use std::{
     io::{self, BufRead},
     ops,
     process::exit,
+    time::{Duration, Instant},
 };
 
 use seq_list::SeqList;
+mod utils;
 
 fn main() {
     use Error::*;
@@ -33,7 +35,7 @@ where
     T: List<i32>,
     for<'b> &'b T: IntoIterator<Item = &'b i32>,
 {
-    let l = read_numbers().ok_or(Error::InputError)?;
+    let l = utils::read_numbers().ok_or(Error::InputError)?;
     calc_stats(&l).ok_or(Error::EmptyListError)
 }
 
@@ -66,30 +68,12 @@ fn get_list_implementation() -> Option<String> {
     }
 }
 
-fn read_numbers<L>() -> Option<L>
-where
-    L: List<i32>,
-    for<'b> &'b L: IntoIterator<Item = &'b i32>,
-{
-    let stdin = io::stdin();
-    let handle = stdin.lock();
-    let lines = handle.lines();
-    let num_list: Option<L> = lines
-        .flat_map(|line| {
-            line.unwrap_or_default()
-                .split_whitespace()
-                .map(|s| s.parse::<i32>().ok())
-                .collect::<Vec<_>>()
-        })
-        .collect();
-    num_list
-}
-
 #[derive(Debug)]
 struct Stats<T> {
     min: T,
     max: T,
     avg: f64,
+    time: Duration,
 }
 
 fn calc_stats<'a, T, L>(l: &'a L) -> Option<Stats<T>>
@@ -98,6 +82,7 @@ where
     L: List<T>,
     for<'b> &'b L: IntoIterator<Item = &'b T>,
 {
+    let start = Instant::now();
     let i = &mut l.into_iter();
     let first_item = i.next()?;
     let (min, max, sum, len) = i.fold(
@@ -130,6 +115,7 @@ where
         min,
         max,
         avg: sum.into() / (len as f64),
+        time: start.elapsed(),
     })
 }
 
