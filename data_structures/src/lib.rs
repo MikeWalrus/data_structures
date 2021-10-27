@@ -25,6 +25,7 @@ mod test {
         for<'a> &'a L: IntoIterator<Item = &'a i32>,
     {
         let mut vecs: Vec<Vec<i32>> = vec![
+            vec![],
             vec![1],
             vec![1, 0, 0, 0],
             vec![0, 0, 0, 0],
@@ -49,9 +50,11 @@ mod test {
         let errors = vecs
             .into_iter()
             .map(|v| -> Result<(), (Vec<i32>, L)> {
-                let first = v[0];
+                let first = *v.get(0).unwrap_or(&0);
                 let mut l: L = v.clone().into_iter().collect();
                 l = l.partition();
+                let len = l.into_iter().count();
+                assert_eq!(len, v.len());
                 l.into_iter()
                     .is_partitioned(|i| i < &first)
                     .then(|| ())

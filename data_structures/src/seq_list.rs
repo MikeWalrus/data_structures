@@ -81,6 +81,9 @@ impl<T> List<T> for SeqList<T> {
     where
         T: Ord,
     {
+        if self.len == 0 {
+            return self;
+        }
         unsafe {
             let mut l = self.ptr.as_ptr().add(1);
             let mut r = self.ptr.as_ptr().add(self.len - 1);
@@ -174,10 +177,6 @@ impl<T> FromIterator<T> for SeqList<T> {
 
 #[cfg(test)]
 mod test {
-    use std::vec;
-
-    use rand::Rng;
-
     use super::*;
 
     #[test]
