@@ -1,5 +1,6 @@
 use std::{
     alloc::{self, realloc, Layout},
+    fmt::{self, Debug},
     marker::PhantomData,
     ops::{Deref, DerefMut},
     ptr::{self, NonNull},
@@ -56,6 +57,15 @@ impl<T> SeqList<T> {
             }
         }
     }
+
+    fn print(&self)
+    where
+        T: fmt::Display,
+    {
+        for i in self.iter() {
+            print!("{} ", i)
+        }
+    }
 }
 
 impl<'a, T> std::iter::IntoIterator for &'a SeqList<T> {
@@ -76,6 +86,59 @@ impl<T> List<T> for SeqList<T> {
         unsafe { ptr::write(self.ptr.as_ptr().add(self.len), elem) }
         self.len += 1;
     }
+
+    fn partition(self) -> Self
+    where T: Ord
+    {
+        unsafe {
+            let mut l = self.ptr.as_ptr().add(1);
+            let mut r = self.ptr.as_ptr().add(self.len - 1);
+            let first = &self[0];
+
+            loop {
+                if l.offset_from(r) > 0 {
+                    ptr::swap(self.ptr.as_ptr(), r);
+                    return self;
+                }
+                if *l < *first {
+                    l = l.add(1);
+                } else {
+                    break;
+                }
+            }
+
+            loop {
+                if r.offset_from(self.ptr.as_ptr()) <= 0 {
+                    return self;
+                }
+                if *r >= *first {
+                    r = r.sub(1);
+                } else {
+                    break;
+                }
+            }
+
+            loop {
+                while *l < *first {
+                    l = l.add(1)
+                }
+
+                while *r >= *first {
+                    r = r.sub(1)
+                }
+
+                if l >= r {
+                    break;
+                }
+                ptr::swap(l, r);
+                l = l.add(1);
+                r = r.sub(1);
+            }
+            ptr::swap(self.ptr.as_ptr(), r);
+            self
+        }
+    }
+
 }
 
 impl<T> Default for SeqList<T> {
@@ -121,26 +184,65 @@ impl<T> FromIterator<T> for SeqList<T> {
 
 #[cfg(test)]
 mod test {
+    use std::vec;
+
+    use rand::Rng;
+
     use super::*;
 
     #[test]
     fn test() {
         let mut vec = SeqList::<i32>::new();
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
-        vec.push(1);
+        for _ in 0..1024 {
+            vec.push(1);
+        }
         vec.push(2);
         assert_eq!(vec.pop().unwrap(), 2);
+        assert_eq!(vec.pop().unwrap(), 1);
+    }
+
+    #[test]
+    fn test_partition() {
+        let mut vecs: Vec<Vec<i32>> = vec![
+            vec![1],
+            vec![1, 0, 0, 0],
+            vec![0, 0, 0, 0],
+            vec![1, 2, 2, 2],
+            vec![1, 2, 3, 4],
+            vec![5, 5, 5, 1],
+            vec![4, 0, 0, 4],
+            vec![1, 2, 3, 4, 5],
+            vec![5, 4, 3, 2, 1, 5],
+        ];
+
+        let mut rng = rand::thread_rng();
+        for _ in 1..1000 {
+            vecs.push(
+                (&mut rng)
+                    .sample_iter(rand::distributions::Standard)
+                    .take(100)
+                    .collect(),
+            );
+        }
+
+        let errors = vecs
+            .into_iter()
+            .map(|v| -> Result<(), (Vec<i32>, SeqList<i32>)> {
+                let first = v[0];
+                let mut l: SeqList<i32> = v.clone().into_iter().collect();
+                l = l.partition();
+                l.iter()
+                    .is_partitioned(|i| i < &first)
+                    .then(|| ())
+                    .ok_or((v, l))
+            })
+            .filter_map(Result::err)
+            .map(|e| {
+                print!("{:?} -> ", e.0);
+                e.1.print();
+                println!()
+            })
+            .next();
+        assert!(errors.is_none())
     }
 }

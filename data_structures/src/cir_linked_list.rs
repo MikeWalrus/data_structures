@@ -152,6 +152,10 @@ impl<T> List<T> for CirLinkedList<T> {
             }
         }
     }
+
+    fn partition(self) -> Self where T: Ord {
+        todo!()
+    }
 }
 
 #[cfg(test)]

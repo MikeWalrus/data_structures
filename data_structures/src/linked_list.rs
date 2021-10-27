@@ -90,6 +90,10 @@ impl<T> List<T> for LinkedList<T> {
         }
         self.tail = tail;
     }
+
+    fn partition(self) -> Self where T: Ord {
+        todo!()
+    }
 }
 
 #[cfg(test)]

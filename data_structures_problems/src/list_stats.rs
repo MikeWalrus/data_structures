@@ -1,7 +1,6 @@
 use data_structures::*;
 use std::{
     env,
-    io::{self, BufRead},
     ops,
     process::exit,
     time::{Duration, Instant},
@@ -78,7 +77,7 @@ struct Stats<T> {
 
 fn calc_stats<'a, T, L>(l: &'a L) -> Option<Stats<T>>
 where
-    T: 'a + Clone + PartialOrd + ops::Add<&'a T, Output = T> + Into<f64>,
+    T: 'a + Clone + Ord + ops::Add<&'a T, Output = T> + Into<f64>,
     L: List<T>,
     for<'b> &'b L: IntoIterator<Item = &'b T>,
 {
@@ -96,19 +95,10 @@ where
             let new_min;
             let new_max;
 
-            if i < &min {
-                new_min = i.clone();
-            } else {
-                new_min = min;
-            }
+            new_min = std::cmp::min(i, &min);
+            new_max = std::cmp::max(i, &max);
 
-            if i > &max {
-                new_max = i.clone();
-            } else {
-                new_max = max;
-            }
-
-            (new_min, new_max, sum + i, len + 1)
+            (new_min.clone(), new_max.clone(), sum + i, len + 1)
         },
     );
     Some(Stats {
