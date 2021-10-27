@@ -29,6 +29,32 @@ impl<T> LinkedList<T> {
         self.head = node.next;
         Some(node.elem)
     }
+
+    fn push_node(&mut self, mut node: Box<Node<T>>) {
+        if self.head.is_none() {
+            self.tail = &mut *node;
+            self.head = Some(node);
+        } else {
+            unsafe {
+                let old_tail = self.tail;
+                self.tail = &mut *node;
+                (*old_tail).next = Some(node)
+            }
+        }
+    }
+
+    fn concatenate(&mut self, mut list: LinkedList<T>) {
+        if self.head.is_some() {
+            unsafe {
+                (*self.tail).next = list.head.take();
+            }
+        } else {
+            self.head = list.head.take();
+        }
+        if !list.tail.is_null() {
+            self.tail = list.tail;
+        }
+    }
 }
 
 impl<T> Drop for LinkedList<T> {
@@ -91,8 +117,33 @@ impl<T> List<T> for LinkedList<T> {
         self.tail = tail;
     }
 
-    fn partition(self) -> Self where T: Ord {
-        todo!()
+    fn partition(mut self) -> Self
+    where
+        T: Ord,
+    {
+        if self.head.is_none() {
+            return self;
+        }
+
+        let mut first_node = self.head.take().unwrap();
+        let first = &first_node.elem;
+        let mut geq = Self::new();
+        let mut curr = first_node.next.take();
+        let mut le = Self::new();
+
+        while let Some(mut node) = curr {
+            curr = node.next.take();
+            if node.elem < *first {
+                &mut le
+            } else {
+                &mut geq
+            }
+            .push_node(node);
+        }
+        let mut new_list = le;
+        new_list.push_node(first_node);
+        new_list.concatenate(geq);
+        new_list
     }
 }
 
@@ -121,5 +172,10 @@ mod test {
         for i in (&l).into_iter().zip(1..4) {
             assert_eq!(i.0, &i.1);
         }
+    }
+
+    #[test]
+    fn test_partition() {
+        super::super::test::test_partition::<LinkedList<i32>>();
     }
 }
