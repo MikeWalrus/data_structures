@@ -1,6 +1,5 @@
 use std::{
     alloc::{self, realloc, Layout},
-    fmt::{self, Debug},
     marker::PhantomData,
     ops::{Deref, DerefMut},
     ptr::{self, NonNull},
@@ -57,15 +56,6 @@ impl<T> SeqList<T> {
             }
         }
     }
-
-    fn print(&self)
-    where
-        T: fmt::Display,
-    {
-        for i in self.iter() {
-            print!("{} ", i)
-        }
-    }
 }
 
 impl<'a, T> std::iter::IntoIterator for &'a SeqList<T> {
@@ -88,7 +78,8 @@ impl<T> List<T> for SeqList<T> {
     }
 
     fn partition(self) -> Self
-    where T: Ord
+    where
+        T: Ord,
     {
         unsafe {
             let mut l = self.ptr.as_ptr().add(1);
@@ -138,7 +129,6 @@ impl<T> List<T> for SeqList<T> {
             self
         }
     }
-
 }
 
 impl<T> Default for SeqList<T> {
@@ -203,46 +193,6 @@ mod test {
 
     #[test]
     fn test_partition() {
-        let mut vecs: Vec<Vec<i32>> = vec![
-            vec![1],
-            vec![1, 0, 0, 0],
-            vec![0, 0, 0, 0],
-            vec![1, 2, 2, 2],
-            vec![1, 2, 3, 4],
-            vec![5, 5, 5, 1],
-            vec![4, 0, 0, 4],
-            vec![1, 2, 3, 4, 5],
-            vec![5, 4, 3, 2, 1, 5],
-        ];
-
-        let mut rng = rand::thread_rng();
-        for _ in 1..1000 {
-            vecs.push(
-                (&mut rng)
-                    .sample_iter(rand::distributions::Standard)
-                    .take(100)
-                    .collect(),
-            );
-        }
-
-        let errors = vecs
-            .into_iter()
-            .map(|v| -> Result<(), (Vec<i32>, SeqList<i32>)> {
-                let first = v[0];
-                let mut l: SeqList<i32> = v.clone().into_iter().collect();
-                l = l.partition();
-                l.iter()
-                    .is_partitioned(|i| i < &first)
-                    .then(|| ())
-                    .ok_or((v, l))
-            })
-            .filter_map(Result::err)
-            .map(|e| {
-                print!("{:?} -> ", e.0);
-                e.1.print();
-                println!()
-            })
-            .next();
-        assert!(errors.is_none())
+        super::super::test::test_partition::<SeqList<i32>>()
     }
 }
