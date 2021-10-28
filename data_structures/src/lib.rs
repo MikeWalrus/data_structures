@@ -12,7 +12,7 @@ where
 
     fn partition(self) -> Self
     where
-        T: Ord;
+        T: PartialOrd;
 }
 
 #[cfg(test)]

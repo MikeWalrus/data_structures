@@ -79,7 +79,7 @@ impl<T> List<T> for SeqList<T> {
 
     fn partition(self) -> Self
     where
-        T: Ord,
+        T: PartialOrd,
     {
         if self.len == 0 {
             return self;

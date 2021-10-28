@@ -156,7 +156,7 @@ impl<T> List<T> for CirLinkedList<T> {
 
     fn partition(mut self) -> Self
     where
-        T: Ord,
+        T: PartialOrd,
     {
         let mut geq = Self::new();
         let mut le = Self::new();

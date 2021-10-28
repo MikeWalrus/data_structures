@@ -28,28 +28,27 @@ fn usage() {
     )
 }
 
-fn stats<T>() -> Result<Stats<i32>>
+fn stats<T>() -> Result<()>
 where
     T: List<i32>,
     for<'b> &'b T: IntoIterator<Item = &'b i32>,
 {
     let l = utils::read_numbers().ok_or(Error::InputError)?;
-    calc_stats(&l).ok_or(Error::EmptyListError)
+    let stats = calc_stats(&l).ok_or(Error::EmptyListError)?;
+    println!("{:?}", stats);
+    Ok(())
 }
 
 fn actual_main() -> Result<()> {
     let implementation = get_list_implementation()
         .ok_or(Error::ArgsError("Specify the implementaion using `-i'."))?;
 
-    let s = match implementation.as_ref() {
+    match implementation.as_ref() {
         "sequential" => stats::<SeqList<i32>>(),
         "singly_linked" => stats::<linked_list::LinkedList<i32>>(),
         "circular" => stats::<cir_linked_list::CirLinkedList<i32>>(),
         _ => Err(Error::ArgsError("No such list implementation.")),
-    }?;
-
-    println!("{:?}", s);
-    Ok(())
+    }
 }
 
 fn get_list_implementation() -> Option<String> {
@@ -111,7 +110,7 @@ where
 
 type Result<T> = std::result::Result<T, Error>;
 
-enum Error {
+pub enum Error {
     EmptyListError,
     ArgsError(&'static str),
     InputError,

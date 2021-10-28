@@ -1,10 +1,9 @@
-use data_structures::*;
 use std::io::{self, BufRead};
 
 pub fn read_numbers<T, L>() -> Option<L>
 where
     T: std::str::FromStr,
-    L: List<T>,
+    L: FromIterator<T>,
     for<'b> &'b L: IntoIterator<Item = &'b T>,
 {
     let stdin = io::stdin();

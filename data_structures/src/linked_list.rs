@@ -120,7 +120,7 @@ impl<T> List<T> for LinkedList<T> {
 
     fn partition(mut self) -> Self
     where
-        T: Ord,
+        T: PartialOrd,
     {
         if self.head.is_none() {
             return self;

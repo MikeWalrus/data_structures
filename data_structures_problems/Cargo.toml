@@ -11,3 +11,7 @@ data_structures = { path = "../data_structures"}
 [[bin]]
 name = "list_stats"
 path = "src/list_stats.rs"
+
+[[bin]]
+name = "list_partition"
+path = "src/list_partition.rs"
