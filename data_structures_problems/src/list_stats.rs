@@ -1,7 +1,6 @@
 use data_structures::*;
 use std::{
-    env,
-    ops,
+    env, ops,
     process::exit,
     time::{Duration, Instant},
 };
@@ -68,6 +67,7 @@ fn get_list_implementation() -> Option<String> {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct Stats<T> {
     min: T,
     max: T,

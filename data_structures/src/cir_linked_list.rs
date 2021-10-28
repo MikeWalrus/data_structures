@@ -24,6 +24,7 @@ impl<T> CirLinkedList<T> {
         }
     }
 
+    #[allow(dead_code)]
     fn pop(&mut self) -> Option<T> {
         if self.head.is_null() {
             None
@@ -153,13 +154,76 @@ impl<T> List<T> for CirLinkedList<T> {
         }
     }
 
-    fn partition(self) -> Self where T: Ord {
-        todo!()
+    fn partition(mut self) -> Self
+    where
+        T: Ord,
+    {
+        let mut geq = Self::new();
+        let mut le = Self::new();
+        let mut curr = self.head;
+        if curr.is_null() {
+            return self;
+        }
+        unsafe {
+            let first = &(*curr).elem;
+            let mut next = (*curr).next;
+            geq.push_node(curr);
+            loop {
+                curr = next;
+                next = (*curr).next;
+                if curr == self.head {
+                    break;
+                }
+                if &(*curr).elem >= first {
+                    &mut geq
+                } else {
+                    &mut le
+                }
+                .push_node(curr);
+            }
+        }
+        self.head = ptr::null_mut();
+        le.concatenate(geq);
+        le
+    }
+}
+
+impl<T> CirLinkedList<T> {
+    unsafe fn push_node(&mut self, node: *mut Node<T>) {
+        let head = self.head;
+        if head.is_null() {
+            self.head = node;
+        } else {
+            let tail = (*head).prev;
+            (*tail).next = node;
+            (*node).prev = tail;
+        }
+        (*self.head).prev = node;
+        (*node).next = self.head;
+    }
+
+    fn concatenate(&mut self, mut list: CirLinkedList<T>) {
+        if list.head.is_null() {
+            return;
+        }
+
+        if !self.head.is_null() {
+            let head = self.head;
+            unsafe {
+                (*(*head).prev).next = list.head;
+                (*(*list.head).prev).next = self.head;
+            }
+        } else {
+            self.head = list.head;
+        }
+        list.head = ptr::null_mut();
     }
 }
 
 #[cfg(test)]
 mod test {
+    use std::ptr::null_mut;
+
     use super::*;
 
     #[test]
@@ -197,5 +261,39 @@ mod test {
 
         let l = CirLinkedList::<i32>::new();
         assert!(l.iter().next().is_none());
+    }
+
+    #[test]
+    fn test_partition() {
+        super::super::test::test_partition::<CirLinkedList<i32>>();
+    }
+
+    #[test]
+    fn test_cat() {
+        let mut l1: CirLinkedList<_> = vec![1, 2, 3].into_iter().collect();
+        let l2: CirLinkedList<_> = vec![4, 5].into_iter().collect();
+        l1.concatenate(l2);
+        assert_eq!(l1.into_iter().count(), 5);
+        for i in l1.iter().zip([1, 2, 3, 4, 5].iter()) {
+            assert_eq!(i.0, i.1);
+        }
+    }
+
+    #[test]
+    fn test_push_node() {
+        let mut l: CirLinkedList<i32> = CirLinkedList::new();
+        for i in 1..=3 {
+            unsafe {
+                l.push_node(Box::into_raw(Box::new(Node {
+                    elem: i,
+                    next: null_mut(),
+                    prev: null_mut(),
+                })));
+            }
+        }
+        let mut i = l.into_iter();
+        assert_eq!(i.next().unwrap(), &1);
+        assert_eq!(i.next().unwrap(), &2);
+        assert_eq!(i.next().unwrap(), &3);
     }
 }

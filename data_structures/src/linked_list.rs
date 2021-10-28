@@ -21,6 +21,7 @@ impl<T> LinkedList<T> {
         }
     }
 
+    #[allow(dead_code)]
     fn pop_front(&mut self) -> Option<T> {
         let node = self.head.take()?;
         if node.next.is_none() {

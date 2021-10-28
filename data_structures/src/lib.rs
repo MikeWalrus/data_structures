@@ -27,6 +27,7 @@ mod test {
         let mut vecs: Vec<Vec<i32>> = vec![
             vec![],
             vec![1],
+            vec![1, 0],
             vec![1, 0, 0, 0],
             vec![0, 0, 0, 0],
             vec![1, 2, 2, 2],
@@ -54,20 +55,18 @@ mod test {
                 let mut l: L = v.clone().into_iter().collect();
                 l = l.partition();
                 let len = l.into_iter().count();
-                assert_eq!(len, v.len());
-                l.into_iter()
-                    .is_partitioned(|i| i < &first)
+                (v.len() == len && l.into_iter().is_partitioned(|i| i < &first))
                     .then(|| ())
                     .ok_or((v, l))
             })
             .filter_map(Result::err)
             .map(|e| {
                 print!("{:?} -> ", e.0);
+                print!("[");
                 for i in e.1.into_iter() {
-                    print!("{} ", i);
-                    println!()
+                    print!("{}, ", i);
                 }
-                println!()
+                println!("]");
             })
             .next();
         assert!(errors.is_none())
