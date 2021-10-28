@@ -17,15 +17,14 @@ struct Node<T> {
 }
 
 impl<T> CirLinkedList<T> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         CirLinkedList {
             head: ptr::null_mut(),
             marker: marker::PhantomData,
         }
     }
 
-    #[allow(dead_code)]
-    fn pop(&mut self) -> Option<T> {
+    pub fn pop(&mut self) -> Option<T> {
         if self.head.is_null() {
             None
         } else {
@@ -50,6 +49,12 @@ impl<T> CirLinkedList<T> {
             list: self,
             ptr: self.head,
         }
+    }
+}
+
+impl<T> Default for CirLinkedList<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

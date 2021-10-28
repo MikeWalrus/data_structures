@@ -14,15 +14,14 @@ struct Node<T> {
 }
 
 impl<T> LinkedList<T> {
-    fn new() -> Self {
+    pub fn new() -> Self {
         LinkedList {
             head: None,
             tail: ptr::null_mut(),
         }
     }
 
-    #[allow(dead_code)]
-    fn pop_front(&mut self) -> Option<T> {
+    pub fn pop_front(&mut self) -> Option<T> {
         let node = self.head.take()?;
         if node.next.is_none() {
             self.tail = ptr::null_mut();
@@ -55,6 +54,12 @@ impl<T> LinkedList<T> {
         if !list.tail.is_null() {
             self.tail = list.tail;
         }
+    }
+}
+
+impl<T> Default for LinkedList<T> {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
