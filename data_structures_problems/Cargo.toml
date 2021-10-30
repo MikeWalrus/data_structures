@@ -15,3 +15,7 @@ path = "src/list_stats.rs"
 [[bin]]
 name = "list_partition"
 path = "src/list_partition.rs"
+
+[[bin]]
+name = "eval"
+path = "src/eval.rs"

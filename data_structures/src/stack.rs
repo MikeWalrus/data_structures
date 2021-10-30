@@ -6,7 +6,7 @@ pub trait Stack<T> {
     fn pop(&mut self) -> Option<T>;
 }
 
-struct SeqStack<T> {
+pub struct SeqStack<T> {
     list: SeqList<T>,
 }
 
@@ -25,6 +25,12 @@ impl<T> Stack<T> for SeqStack<T> {
     #[inline]
     fn pop(&mut self) -> Option<T> {
         self.list.pop()
+    }
+}
+
+impl<T> SeqStack<T> {
+    pub fn peek(&self) -> Option<&T> {
+        self.list.last()
     }
 }
 

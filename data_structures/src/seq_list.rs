@@ -1,5 +1,6 @@
 use std::{
     alloc::{self, realloc, Layout},
+    fmt::Debug,
     marker::PhantomData,
     ops::{Deref, DerefMut},
     ptr::{self, NonNull},
@@ -172,6 +173,18 @@ impl<T> FromIterator<T> for SeqList<T> {
             l.push(i);
         }
         l
+    }
+}
+
+impl<T> Debug for SeqList<T>
+where
+    T: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        for i in self.iter() {
+            write!(f, "{:?} ", i)?
+        }
+        Ok(())
     }
 }
 
