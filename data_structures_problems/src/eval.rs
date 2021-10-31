@@ -5,7 +5,9 @@ use data_structures::{
 };
 
 fn main() {
-    infix_to_postfix("1+1").unwrap();
+    let postfix = infix_to_postfix("1+1").unwrap();
+    let result = eval_postfix(postfix).unwrap();
+    println!("{}", result);
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -24,6 +26,16 @@ impl Operator {
             Operator::Multiply => 2,
             Operator::Divide => 2,
         }
+    }
+
+    fn apply(&self, operand1: i32, operand2: i32) -> Option<i32> {
+        let f = match self {
+            Operator::Add => i32::checked_add,
+            Operator::Subtract => i32::checked_sub,
+            Operator::Multiply => i32::checked_mul,
+            Operator::Divide => i32::checked_div,
+        };
+        f(operand1, operand2)
     }
 }
 
@@ -56,6 +68,7 @@ struct ExprError {
 enum ExprErrorType {
     IllegalChar,
     UnmatchedParenthesis,
+    I32Overflow,
 }
 
 fn infix_to_postfix(s: &str) -> Result<SeqList<Token>, ExprError> {
@@ -66,7 +79,10 @@ fn infix_to_postfix(s: &str) -> Result<SeqList<Token>, ExprError> {
     while let Some((pos, c)) = i.next() {
         match c {
             _ if c.is_digit(RADIX) => {
-                let number = get_number(c, &mut i);
+                let number = get_number(c, &mut i).ok_or(ExprError {
+                    what: ExprErrorType::I32Overflow,
+                    pos,
+                })?;
                 ret.push(Token::Num(number));
             }
             '(' => stack.push(NonNumber::LeftParenthesis(pos)),
@@ -137,17 +153,54 @@ fn handle_an_operator(
     Ok(())
 }
 
-fn get_number<T: Iterator<Item = (usize, char)>>(c: char, i: &mut std::iter::Peekable<T>) -> u32 {
+fn get_number<T: Iterator<Item = (usize, char)>>(
+    c: char,
+    i: &mut std::iter::Peekable<T>,
+) -> Option<u32> {
     let mut ret = c.to_digit(RADIX).unwrap();
     while let Some((_, c)) = i.peek() {
         if let Some(digit) = c.to_digit(RADIX) {
-            ret = ret * RADIX + digit;
+            ret = ret.wrapping_mul(RADIX).wrapping_add(digit);
             i.next();
         } else {
             break;
         }
     }
-    ret
+    if ret as i32 >= 0 {
+        Some(ret)
+    } else {
+        None
+    }
+}
+
+#[derive(Debug)]
+enum EvalError {
+    MissingOperand,
+    Overflow(Operator, i32, i32),
+    ExtraOperands,
+}
+
+fn eval_postfix(postfix: SeqList<Token>) -> Result<i32, EvalError> {
+    let mut stack = SeqStack::<i32>::new();
+    for token in postfix.into_iter() {
+        match token {
+            Token::Operator(op) => {
+                let operand2 = stack.pop().ok_or(EvalError::MissingOperand)?;
+                let operand1 = stack.pop().ok_or(EvalError::MissingOperand)?;
+                let result = op
+                    .apply(operand1, operand2)
+                    .ok_or_else(|| EvalError::Overflow(op.clone(), operand1, operand2))?;
+                stack.push(result)
+            }
+            Token::Num(n) => stack.push(*n as i32),
+        }
+    }
+    let result = stack.pop().ok_or(EvalError::ExtraOperands)?;
+    if stack.pop().is_none() {
+        Ok(result)
+    } else {
+        Err(EvalError::ExtraOperands)
+    }
 }
 
 #[cfg(test)]
@@ -156,8 +209,8 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_postfix_to_infix() {
-        let test_cases = vec![
+    fn test() {
+        let test_cases: Vec<(_, _, Option<i32>)> = vec![
             (
                 "1 +1",
                 Ok(vec![
@@ -165,6 +218,7 @@ mod test {
                     Token::Num(1),
                     Token::Operator(Operator::Add),
                 ]),
+                Some(2),
             ),
             (
                 "a",
@@ -172,6 +226,7 @@ mod test {
                     what: ExprErrorType::IllegalChar,
                     pos: 0,
                 }),
+                None,
             ),
             (
                 "1+2*3",
@@ -182,6 +237,7 @@ mod test {
                     Token::Operator(Operator::Multiply),
                     Token::Operator(Operator::Add),
                 ]),
+                Some(7),
             ),
             (
                 "(( 1 + 2 ) * 3)",
@@ -192,6 +248,7 @@ mod test {
                     Token::Num(3),
                     Token::Operator(Operator::Multiply),
                 ]),
+                Some(9),
             ),
             (
                 "(1+1",
@@ -199,6 +256,7 @@ mod test {
                     what: ExprErrorType::UnmatchedParenthesis,
                     pos: 0,
                 }),
+                None,
             ),
             (
                 "1+1)",
@@ -206,6 +264,7 @@ mod test {
                     what: ExprErrorType::UnmatchedParenthesis,
                     pos: 3,
                 }),
+                None,
             ),
             (
                 "1 + 1 + 1",
@@ -216,35 +275,48 @@ mod test {
                     Token::Num(1),
                     Token::Operator(Operator::Add),
                 ]),
+                Some(3),
             ),
             (
-                "1 + (2 + 3)",
+                "1 - (2 + 3)",
                 Ok(vec![
                     Token::Num(1),
                     Token::Num(2),
                     Token::Num(3),
                     Token::Operator(Operator::Add),
-                    Token::Operator(Operator::Add),
+                    Token::Operator(Operator::Subtract),
                 ]),
+                Some(-4),
+            ),
+            (
+                " 1000000000000000000",
+                Err(ExprError {
+                    what: ExprErrorType::I32Overflow,
+                    pos: 1,
+                }),
+                None,
             ),
         ];
         let mut i = test_cases
             .iter()
-            .map(|(expr, expect)| {
-                let result = infix_to_postfix(expr);
+            .map(|(expr, expect, result)| {
+                let postfix = infix_to_postfix(expr);
                 let is_good = match expect {
                     Ok(expect) => {
-                        result.is_ok() && result.as_ref().unwrap().into_iter().eq(expect.iter())
+                        postfix.is_ok() && postfix.as_ref().unwrap().into_iter().eq(expect.iter())
                     }
-                    Err(e) => result.is_err() && result.as_ref().err().unwrap() == e,
+                    Err(e) => postfix.is_err() && postfix.as_ref().err().unwrap() == e,
                 };
                 if !is_good {
                     println!("Expression:");
                     println!("{}", expr);
                     println!("Got:");
-                    println!("{:?}", result);
+                    println!("{:?}", postfix);
                     println!("Expect:");
                     println!("{:?}", expect)
+                }
+                if result.is_some() {
+                    assert_eq!(&eval_postfix(postfix.unwrap()).ok(), result);
                 }
                 is_good
             })
@@ -258,7 +330,7 @@ mod test {
         while let Some((_, c)) = i.next() {
             match c {
                 '0'..='9' => {
-                    let number = get_number(c, &mut i);
+                    let number = get_number(c, &mut i).unwrap();
                     assert_eq!(number, 123);
                     assert_eq!(i.next().unwrap().1, 'a')
                 }
