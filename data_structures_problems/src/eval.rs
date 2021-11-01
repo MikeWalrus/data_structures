@@ -1,3 +1,9 @@
+use std::{
+    fmt::Display,
+    io::{self, BufRead},
+};
+
+use colored::Colorize;
 use data_structures::{
     seq_list::SeqList,
     stack::{SeqStack, Stack},
@@ -5,9 +11,41 @@ use data_structures::{
 };
 
 fn main() {
-    let postfix = infix_to_postfix("1+1").unwrap();
-    let result = eval_postfix(postfix).unwrap();
-    println!("{}", result);
+    let stdin = io::stdin();
+    let handle = stdin.lock();
+    let mut lines = handle.lines();
+    while let Some(Ok(expression)) = lines.next() {
+        if !expression.is_empty() {
+            let result = eval_and_print(expression);
+            if let Some(result) = result {
+                println!("{}", result);
+            }
+        }
+    }
+}
+
+fn eval_and_print(expression: String) -> Option<i32> {
+    let postfix = infix_to_postfix(&expression)
+        .map_err(|e| {
+            print_expr_error(e, expression);
+        })
+        .ok()?;
+    eval_postfix(postfix)
+        .map_err(|e| println!("{}: {:?}", "error".red(), e))
+        .ok()
+}
+
+fn print_expr_error(e: ExprError, expression: String) {
+    let position = e.pos;
+    let offset = if position < 80 { 0 } else { position - 20 };
+    let segment = &expression[offset..];
+    println!("{}: {}", "error".red(), e);
+    println!(
+        "{}{:.40}",
+        if offset == 0 { "    " } else { "... " },
+        segment
+    );
+    println!("    {}^", " ".repeat(e.pos - offset));
 }
 
 #[derive(PartialEq, Clone, Debug)]
@@ -64,11 +102,28 @@ struct ExprError {
     pos: usize,
 }
 
+impl Display for ExprError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}, at {}", self.what, self.pos.to_string().blue())
+    }
+}
+
 #[derive(Debug, PartialEq)]
 enum ExprErrorType {
     IllegalChar,
     UnmatchedParenthesis,
     I32Overflow,
+}
+
+impl Display for ExprErrorType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let description = match self {
+            ExprErrorType::IllegalChar => "illegal character",
+            ExprErrorType::UnmatchedParenthesis => "unmatched parenthesis",
+            ExprErrorType::I32Overflow => "32-bit signed integer overflow",
+        };
+        write!(f, "{}", description)
+    }
 }
 
 fn infix_to_postfix(s: &str) -> Result<SeqList<Token>, ExprError> {
@@ -177,7 +232,7 @@ fn get_number<T: Iterator<Item = (usize, char)>>(
 enum EvalError {
     MissingOperand,
     Overflow(Operator, i32, i32),
-    ExtraOperands,
+    TooManyOperands,
 }
 
 fn eval_postfix(postfix: SeqList<Token>) -> Result<i32, EvalError> {
@@ -195,11 +250,11 @@ fn eval_postfix(postfix: SeqList<Token>) -> Result<i32, EvalError> {
             Token::Num(n) => stack.push(*n as i32),
         }
     }
-    let result = stack.pop().ok_or(EvalError::ExtraOperands)?;
+    let result = stack.pop().ok_or(EvalError::TooManyOperands)?;
     if stack.pop().is_none() {
         Ok(result)
     } else {
-        Err(EvalError::ExtraOperands)
+        Err(EvalError::TooManyOperands)
     }
 }
 
@@ -301,7 +356,7 @@ mod test {
             .iter()
             .map(|(expr, expect, result)| {
                 let postfix = infix_to_postfix(expr);
-                let is_good = match expect {
+                let mut is_good = match expect {
                     Ok(expect) => {
                         postfix.is_ok() && postfix.as_ref().unwrap().into_iter().eq(expect.iter())
                     }
@@ -316,7 +371,11 @@ mod test {
                     println!("{:?}", expect)
                 }
                 if result.is_some() {
-                    assert_eq!(&eval_postfix(postfix.unwrap()).ok(), result);
+                    let eval_result = eval_postfix(postfix.unwrap()).ok();
+                    is_good = &eval_result == result;
+                    if !is_good {
+                        println!("{} (should be {})", eval_result.unwrap(), result.unwrap())
+                    }
                 }
                 is_good
             })
