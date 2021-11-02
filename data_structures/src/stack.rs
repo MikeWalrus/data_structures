@@ -32,6 +32,14 @@ impl<T> SeqStack<T> {
     pub fn peek(&self) -> Option<&T> {
         self.list.last()
     }
+
+    pub fn peek_mut(&mut self) -> Option<&mut T> {
+        self.list.last_mut()
+    }
+
+    pub fn list(self) -> SeqList<T> {
+        self.list
+    }
 }
 
 struct LinkedStack<T> {
