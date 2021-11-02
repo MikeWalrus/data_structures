@@ -20,3 +20,7 @@ path = "src/list_partition.rs"
 [[bin]]
 name = "eval"
 path = "src/eval.rs"
+
+[[bin]]
+name = "maze"
+path = "src/maze.rs"
