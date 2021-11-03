@@ -1,5 +1,5 @@
 use std::{
-    collections::HashSet,
+    collections::{HashSet, VecDeque},
     convert::identity,
     fmt::Display,
     io::{self, BufRead},
@@ -7,7 +7,10 @@ use std::{
     usize,
 };
 
-use data_structures::stack::{SeqStack, Stack};
+use data_structures::{
+    queue::{Queue, SeqQueue},
+    stack::{SeqStack, Stack},
+};
 
 fn main() {
     let stdio = io::stdin();
@@ -26,14 +29,25 @@ fn main() {
     board[exit.0][exit.1] = Block::Exit;
     let maze = Maze { board, entry, exit };
     println!("{}", maze);
-    let solution = maze.solve_dfs();
-    maze.print_solution(&solution);
-    assert!(maze.is_solved(solution));
+    match (maze.solve_bfs(), maze.solve_dfs()) {
+        (None, None) => {
+            eprintln!("Unsolvable");
+            std::process::exit(1)
+        }
+        (None, Some(_)) => panic!("bfs failed"),
+        (Some(_), None) => panic!("dfs failed"),
+        (Some(bfs_solution), Some(dfs_solution)) => {
+            maze.print_solution(&bfs_solution);
+            maze.print_solution(&dfs_solution);
+            assert!(maze.is_solved(dfs_solution));
+            assert!(maze.is_solved(bfs_solution));
+        }
+    }
 }
 
 fn read_board(height: usize, width: usize, mut lines: io::Lines<io::StdinLock>) -> Board {
     let mut board: Vec<Vec<Block>> = Vec::with_capacity(height + 2);
-    add_vertical_boundary(&mut board, width);
+    add_horizontal_boundary(&mut board, width);
     for _ in 0..height {
         let line = lines.next().unwrap().unwrap();
         let mut vec: Vec<Block> = Vec::with_capacity(width + 2);
@@ -51,11 +65,11 @@ fn read_board(height: usize, width: usize, mut lines: io::Lines<io::StdinLock>) 
         assert_eq!(vec.len(), width + 2);
         board.push(vec)
     }
-    add_vertical_boundary(&mut board, width);
+    add_horizontal_boundary(&mut board, width);
     board
 }
 
-fn add_vertical_boundary(maze: &mut Vec<Vec<Block>>, width: usize) {
+fn add_horizontal_boundary(maze: &mut Vec<Vec<Block>>, width: usize) {
     maze.push(vec![Block::Obstacle; width + 2]);
 }
 
@@ -123,21 +137,23 @@ impl Step {
 }
 
 impl Maze {
-    fn solve_dfs(&self) -> Vec<Coord> {
-        let stack = self.dfs();
-        stack
-            .list()
-            .iter()
-            .map(|Step { coord, count: _ }| *coord)
-            .collect()
+    fn solve_dfs(&self) -> Option<Vec<Coord>> {
+        let stack = self.dfs()?;
+        Some(
+            stack
+                .list()
+                .iter()
+                .map(|Step { coord, count: _ }| *coord)
+                .collect(),
+        )
     }
 
-    fn dfs(&self) -> SeqStack<Step> {
+    fn dfs(&self) -> Option<SeqStack<Step>> {
         let mut stack: SeqStack<Step> = SeqStack::new();
         let mut visited = HashSet::<Coord>::new();
         stack.push(Step::with_coord(self.entry));
         loop {
-            let current = stack.peek_mut().unwrap();
+            let current = stack.peek_mut()?;
             visited.insert(current.coord);
             if current.coord == self.exit {
                 break;
@@ -161,7 +177,7 @@ impl Maze {
                 stack.push(next_step)
             }
         }
-        stack
+        Some(stack)
     }
 
     fn is_solved(&self, solution: Vec<Coord>) -> bool {
@@ -178,6 +194,10 @@ impl Maze {
     }
 
     fn print_solution(&self, solution: &[Coord]) {
+        if solution.len() <= 2 {
+            println!("Trivial.");
+            return;
+        }
         let mut chars: Vec<Vec<char>> = Vec::with_capacity(self.board.len());
         chars.extend(self.board.iter().map(|line| {
             let mut v = Vec::with_capacity(self.board[0].len());
@@ -260,5 +280,40 @@ impl Orientation {
             },
             std::cmp::Ordering::Greater => Orientation::South,
         }
+    }
+}
+
+impl Maze {
+    fn solve_bfs(&self) -> Option<Vec<Coord>> {
+        let mut prev_steps: Vec<Vec<Option<Coord>>> =
+            vec![vec![None; self.board[0].len()]; self.board.len()];
+        let mut queue: SeqQueue<Step> = SeqQueue::new();
+        queue.push(Step::with_coord(self.entry));
+        prev_steps[self.entry.0][self.entry.1] = Some(self.entry);
+        loop {
+            let current = queue.pop_front()?;
+            let current_coord = current.coord;
+
+            if current_coord == self.exit {
+                break;
+            }
+
+            for next_coord in current {
+                if prev_steps[next_coord.0][next_coord.1].is_none()
+                    && !matches!(self.board[next_coord.0][next_coord.1], Block::Obstacle)
+                {
+                    prev_steps[next_coord.0][next_coord.1] = Some(current_coord);
+                    queue.push(Step::with_coord(next_coord));
+                }
+            }
+        }
+        let mut solution = VecDeque::<Coord>::new();
+        let mut i = self.exit;
+        while i != self.entry {
+            solution.push_front(i);
+            i = prev_steps[i.0][i.1].unwrap()
+        }
+        solution.push_front(self.entry);
+        Some(Vec::from(solution))
     }
 }

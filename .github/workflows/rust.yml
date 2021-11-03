@@ -20,3 +20,5 @@ jobs:
         with:
           toolchain: nightly
           command: test
+      - name: Run extra tests
+        run: bash ./scripts/maze.sh

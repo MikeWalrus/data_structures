@@ -12,7 +12,7 @@ pub trait Queue<T> {
     fn pop_front(&mut self) -> Option<T>;
 }
 
-struct SeqQueue<T> {
+pub struct SeqQueue<T> {
     ptr: NonNull<T>,
     capacity: usize,
     marker: PhantomData<T>,
@@ -104,11 +104,20 @@ impl<T> SeqQueue<T> {
             unsafe {
                 let ptr = self.ptr.as_ptr();
                 let src = ptr.add(self.head);
-                let dst = ptr.add(old_capacity);
+                let new_head = self.head + old_capacity;
+                let dst = ptr.add(new_head);
                 let count = old_capacity - self.head;
                 ptr::copy_nonoverlapping(src, dst, count);
-                self.head = old_capacity;
+                self.head = new_head;
             }
+        }
+    }
+
+    pub fn peek_front_mut(&mut self) -> Option<&mut T> {
+        if self.is_empty() {
+            None
+        } else {
+            unsafe { self.ptr.as_ptr().add(self.head).as_mut() }
         }
     }
 }
@@ -177,5 +186,30 @@ mod test {
         for i in 1..=100 {
             q.push(i);
         }
+    }
+
+    #[test]
+    fn test_reorganise() {
+        let mut q: SeqQueue<i32> = SeqQueue::new();
+        q.push(100);
+        q.push(100);
+        q.pop_front();
+        q.push(100);
+        q.pop_front();
+        q.push(100);
+        q.pop_front();
+        q.push(100);
+        q.pop_front();
+        q.push(100);
+        q.push(100);
+        q.pop_front();
+        q.push(100);
+        q.push(100);
+        q.pop_front();
+        q.push(100);
+        q.pop_front();
+        q.push(100);
+        q.pop_front();
+        assert_eq!(q.peek_front_mut().unwrap(), &100);
     }
 }
