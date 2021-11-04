@@ -20,5 +20,7 @@ jobs:
         with:
           toolchain: nightly
           command: test
-      - name: Run extra tests
+      - name: Test maze solving
         run: bash ./scripts/maze.sh
+      - name: Test text matching
+        run: python3 ./scripts/matching.py
