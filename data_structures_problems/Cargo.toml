@@ -24,3 +24,7 @@ path = "src/eval.rs"
 [[bin]]
 name = "maze"
 path = "src/maze.rs"
+
+[[bin]]
+name = "matching"
+path = "src/matching.rs"
