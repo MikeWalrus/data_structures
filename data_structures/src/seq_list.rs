@@ -57,6 +57,36 @@ impl<T> SeqList<T> {
             }
         }
     }
+
+    pub fn concatenate(&mut self, mut list: Self) {
+        while self.len + list.len > self.capacity {
+            self.grow()
+        }
+        unsafe {
+            ptr::copy_nonoverlapping(list.ptr.as_ptr(), self.ptr.as_ptr().add(self.len), list.len);
+            self.len += list.len;
+        }
+        let layout = Layout::array::<T>(list.capacity).unwrap();
+        unsafe { alloc::dealloc(list.ptr.as_ptr() as *mut u8, layout) }
+        list.len = 0;
+    }
+
+    /// # Safety
+    /// pos should not be out of range
+    pub unsafe fn insert_list(&mut self, mut list: Self, pos: usize) {
+        while self.len + list.len > self.capacity {
+            self.grow();
+        }
+        ptr::copy_nonoverlapping(
+            list.ptr.as_ptr().add(pos),
+            list.ptr.as_ptr().add(pos).add(list.len),
+            self.len - pos,
+        );
+        ptr::copy_nonoverlapping(list.ptr.as_ptr(), self.ptr.as_ptr().add(pos), list.len);
+        let layout = Layout::array::<T>(list.capacity).unwrap();
+        alloc::dealloc(list.ptr.as_ptr() as *mut u8, layout);
+        list.len = 0;
+    }
 }
 
 impl<'a, T> std::iter::IntoIterator for &'a SeqList<T> {

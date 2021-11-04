@@ -43,7 +43,7 @@ impl<T> LinkedList<T> {
         }
     }
 
-    fn concatenate(&mut self, mut list: LinkedList<T>) {
+    pub fn concatenate(&mut self, mut list: LinkedList<T>) {
         if self.head.is_some() {
             unsafe {
                 (*self.tail).next = list.head.take();
