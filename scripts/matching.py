@@ -1,11 +1,11 @@
 #! /usr/bin/python3
 
-import os
+from os.path import realpath, dirname
 import pathlib
 from subprocess import Popen, PIPE
 
 def main():
-    directory = pathlib.Path(os.path.dirname(__file__))
+    directory = pathlib.Path(dirname(realpath(__file__)))
     binary = directory/"../target/release/matching"
 
     with open(directory / "matching_test_cases.txt") as file:
